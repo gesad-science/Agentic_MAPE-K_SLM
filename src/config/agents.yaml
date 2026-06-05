@@ -1,0 +1,31 @@
+monitor_agent:
+  role: >
+    ""
+  goal: >
+    ""
+  backstory: >
+    ""
+
+analyse_agent:
+  role: >
+    ""
+  goal: >
+    ""
+  backstory: >
+    ""
+
+planner_agent:
+  role: >
+    ""
+  goal: >
+    ""
+  backstory: >
+    ""
+
+executor_agent:
+  role: >
+    ""
+  goal: > 
+    ""
+  backstory: >  
+    ""
