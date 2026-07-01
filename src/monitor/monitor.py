@@ -1,9 +1,11 @@
 from monitor.detectors import EventDetector
 from monitor.models import RobotState, CubeState, TargetState, Metrics, MonitorOutput
+from knowledgeBase import KnowledgeBase
 
 class Monitor:
     def __init__(self):
         self.detector = EventDetector()
+        self.knowledge_base = KnowledgeBase()
 
     def process(self, row):
         robot = RobotState(
@@ -67,6 +69,12 @@ class Monitor:
             )
         )
 
+        states = {
+            "robot": robot,
+            "cube": cube,
+            "target": target
+        }
+
         metrics = Metrics(
             reward=row.reward,
             success=row.success,
@@ -75,6 +83,9 @@ class Monitor:
         )
 
         events = self.detector.detect(row)
+
+        self.knowledge_base.historical_base.extend(states)
+        self.knowledge_base.historical_base.append(metrics)
 
         return MonitorOutput(
             episode=row.episode,
