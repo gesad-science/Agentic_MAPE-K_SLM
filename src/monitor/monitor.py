@@ -1,5 +1,4 @@
 from monitor.detectors import EventDetector
-from monitor.models import RobotState, CubeState, TargetState, Metrics, MonitorOutput
 from knowledgeBase import KnowledgeBase
 
 class Monitor:
@@ -8,66 +7,64 @@ class Monitor:
         self.knowledge_base = KnowledgeBase()
 
     def process(self, row):
-        robot = RobotState(
-            position=(
-                row.ee_x,
-                row.ee_y,
-                row.ee_z
-            ),
-            velocity=(
-                row.ee_vx,
-                row.ee_vy,
-                row.ee_vz
-            ),
-            joints=[
-                row.joint_1,
-                row.joint_2,
-                row.joint_3,
-                row.joint_4,
-                row.joint_5,
-                row.joint_6,
-                row.joint_7
+        robot = {
+            "position": [
+                float(row.ee_x),
+                float(row.ee_y),
+                float(row.ee_z)
             ],
-            joint_velocities=[
-                row.joint_vel_1,
-                row.joint_vel_2,
-                row.joint_vel_3,
-                row.joint_vel_4,
-                row.joint_vel_5,
-                row.joint_vel_6,
-                row.joint_vel_7
+            "velocity": [
+                float(row.ee_vx),
+                float(row.ee_vy),
+                float(row.ee_vz)
+            ],
+            "joints": [
+                float(row.joint_1),
+                float(row.joint_2),
+                float(row.joint_3),
+                float(row.joint_4),
+                float(row.joint_5),
+                float(row.joint_6),
+                float(row.joint_7)
+            ],
+            "joint_velocities": [
+                float(row.joint_vel_1),
+                float(row.joint_vel_2),
+                float(row.joint_vel_3),
+                float(row.joint_vel_4),
+                float(row.joint_vel_5),
+                float(row.joint_vel_6),
+                float(row.joint_vel_7)
             ]
-        )
+        }
 
-        cube = CubeState(
-            position=(
-                row.cube_x,
-                row.cube_y,
-                row.cube_z
-            ),
+        cube = {
+            "position": [
+                float(row.cube_x),
+                float(row.cube_y),
+                float(row.cube_z)
+            ],
+            "orientation": [
+                float(row.cube_roll),
+                float(row.cube_pitch),
+                float(row.cube_yaw)
+            ],
+            "velocity": [
+                float(row.cube_vx),
+                float(row.cube_vy),
+                float(row.cube_vz)
+            ]
+        }
 
-            orientation=(
-                row.cube_roll,
-                row.cube_pitch,
-                row.cube_yaw
-            ),
-
-            velocity=(
-                row.cube_vx,
-                row.cube_vy,
-                row.cube_vz
-            )
-        )
-
-        target = TargetState(
-            name=row.active_target_name,
-            index=row.active_target_index,
-            position=(
-                row.target_x,
-                row.target_y,
-                row.target_z
-            )
-        )
+        target = {
+            "name": row.active_target_name,
+            "index": int(row.active_target_index),
+            "position": [
+                float(row.target_x),
+                float(row.target_y),
+                float(row.target_z)
+            ]
+        }
 
         states = {
             "robot": robot,
@@ -75,24 +72,24 @@ class Monitor:
             "target": target
         }
 
-        metrics = Metrics(
-            reward=row.reward,
-            success=row.success,
-            dist_ee_cube=row.dist_ee_cube,
-            dist_cube_target=row.dist_cube_target 
-        )
+        metrics = {
+            "reward": float(row.reward),
+            "success": bool(row.success),
+            "dist_ee_cube": float(row.dist_ee_cube),
+            "dist_cube_target": float(row.dist_cube_target)
+        }
 
         events = self.detector.detect(row)
 
         self.knowledge_base.historical_base.extend(states)
         self.knowledge_base.historical_base.append(metrics)
 
-        return MonitorOutput(
-            episode=row.episode,
-            step=row.step,
-            robot=robot,
-            cube=cube,
-            target=target,
-            metrics=metrics,
-            events=events
-        )
+        return {
+            "episode": int(row.episode),
+            "step": int(row.step),
+            "robot": robot,
+            "cube": cube,
+            "target": target,
+            "metrics": metrics,
+            "events": events
+        }
