@@ -1,9 +1,9 @@
-from itertools import count
+import numpy as np
 
 from crew import AnalyserCrew
-from monitor.reader import CSVReader
+from knowledgeBase import knowledge_base
 from monitor.monitor import Monitor
-import numpy as np
+from monitor.reader import CSVReader
 
 
 def convert_numpy(obj):
@@ -28,29 +28,83 @@ def convert_numpy(obj):
     return obj
 
 
-csv_reader = CSVReader("src/data/caminho-feliz.csv")
-monitor_instance = Monitor()
-crew = AnalyserCrew().crew()
-count=0
-outputs = []
-aux=True
-while aux:
-    row = csv_reader.next()
+class MAPEKExecutor:
 
-    if row is None:
-        break
+    def __init__(self, csv_path: str):
+        self.reader = CSVReader(csv_path)
+        self.monitor = Monitor()
+        self.knowledge = knowledge_base
+        self.analyser = AnalyserCrew()
 
-    output = monitor_instance.process(row)
-    result = crew.kickoff(
-        inputs={
-            "monitor_output": convert_numpy(output)
+    def execute_step(self):
+
+        row = self.reader.next()
+
+        if row is None:
+            return None
+
+        # --------------------
+        # MONITOR
+        # --------------------
+        monitor_output = convert_numpy(
+            self.monitor.process(row)
+        )
+
+        # --------------------
+        # ANALYSER
+        # --------------------
+        analysis_output = self.analyser.crew().kickoff(
+            inputs={
+                "monitor_output": monitor_output
+            }
+        )
+
+        # --------------------
+        # UPDATE KNOWLEDGE BASE
+        # --------------------
+        self.knowledge. update_history(
+            monitor_output
+        )
+
+        self.knowledge.update_analysis_history(
+            analysis_output
+        )
+
+        return {
+            "monitor": monitor_output,
+            "analysis": analysis_output
         }
-    )
-    print(result)
-    if count==8:
-        aux = False
+
+    def execute(self):
+
+        results = []
+
+        while True:
+
+            result = self.execute_step()
+
+            if result is None:
+                break
+
+            results.append(result)
+
+            print("=" * 60)
+            print("MONITOR")
+            print(result["monitor"])
+            print()
+
+            print("ANALYSIS")
+            print(result["analysis"])
+
+        return results
     
-    count+=1
-    outputs.append(convert_numpy(output))
+    def get_knowledge_base(self):
+        return self.knowledge
+    
+executor = MAPEKExecutor(
+    "src/data/caminho-feliz.csv"
+)
+
+results = executor.execute()
 
 

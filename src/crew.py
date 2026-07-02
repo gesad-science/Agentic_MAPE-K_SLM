@@ -2,7 +2,13 @@ from crewai.knowledge.source.csv_knowledge_source import CSVKnowledgeSource
 from crewai import LLM, Agent, Task, Crew, Process
 from crewai.project import CrewBase, task, crew, agent
 import yaml, os
-from tools import calculate_state, get_history_analyses, calculate_progress, calculate_cube_status, calculate_ee_status, check_target_reached,calculate_need_replan   
+from tools import (
+    get_last_monitor_output,
+    get_last_analysis_output,
+    get_current_target,
+    is_cube_moving,
+    is_cube_getting_closer_to_target
+) 
 
 llm = LLM(model="ollama/qwen2.5:7b", temperature=0)
 
@@ -20,52 +26,40 @@ class AnalyserCrew:
             config=self.agents_config["analyse_agent"],
             verbose=True,
             tools=[
-                get_history_analyses,
-                calculate_progress,
-                calculate_cube_status,
-                calculate_ee_status,
-                check_target_reached,
-                calculate_state,
-                calculate_need_replan
+                get_last_monitor_output,
+                get_last_analysis_output,
+                get_current_target,
+                is_cube_moving,
+                is_cube_getting_closer_to_target,
+
             ],
             llm=llm,
         )
 
     @task
-    def query_knowledge_base(self) -> Task:
+    def analysi(self) -> Task:
         return Task(
-            config=self.tasks_config["query_knowledge_base"],
+            config=self.tasks_config["analysis"],
             agent=self.analyser_agent(),
         )
 
-    @task
-    def metrics_analyser(self) -> Task:
-        return Task(
-            config=self.tasks_config["metrics_analyser"],
-            agent=self.analyser_agent(),
-            context=[self.query_knowledge_base()],
-        )
-
-    @task
-    def analysis_diagnosis(self) -> Task:
-        return Task(
-            config=self.tasks_config["analysis_diagnosis"],
-            agent=self.analyser_agent(),
-            context=[
-                self.query_knowledge_base(),
-                self.metrics_analyser()
-            ]
-        )
+    # @task
+    # def analysis_diagnosis(self) -> Task:
+    #     return Task(
+    #         config=self.tasks_config["analysis_diagnosis"],
+    #         agent=self.analyser_agent(),
+    #         context=[
+    #             self.metrics_analyser()
+    #         ]
+    #     )
 
     @crew
     def crew(self) -> Crew:
         return Crew(
             agents=[self.analyser_agent()],  
             tasks=[
-                self.query_knowledge_base(),
-                self.metrics_analyser(),
-                self.analysis_diagnosis()
-            ],
+                self.analysi(),
+                ],
             process=Process.sequential,
             verbose=True
         )
