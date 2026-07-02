@@ -1,0 +1,138 @@
+query_knowledge_base:
+  description: >
+    Consultar a Base de Conhecimento para recuperar até as 10 últimas analises feitas 
+    pelo agente Analyser.
+  expected_output: >
+    "Retorne uma lista com até 10 análises anteriores, 
+    cada uma representada como um dicionário contendo as seguintes chaves:
+
+    {
+        "state": "",
+        "progress": 0,
+        "cube_status": "",
+        "ee_status": "",
+        "target_reached": false,
+        "need_replan": false,
+        "symptom": "",
+        "urgency": "",
+        "explanation": "",
+        "anomalies": []
+    }"
+
+  agent: analyser_agent
+
+metrics_analyser:
+  description: >
+    Analise os dados recebidos do Monitor.
+
+    Dados do Monitor:
+    {monitor_output}
+
+    Utilize as seguintes ferramentas:
+
+    - Calculate Progress(dist_cube_target, initial_distance)
+      Calcula o percentual de progresso.
+
+    - Calculate Cube Status(monitor_output)
+      Determina se o cubo está STATIC ou MOVING.
+
+    - Calculate End Effector Status(current_distance, previous_distance)
+      Determina se o End-Effector está APPROACHING, MOVING_AWAY ou STOPPED.
+
+    - Check Target Reached(success)
+      Verifica se o alvo foi alcançado.
+
+    - Calculate Need Replan(distances)
+      Detecta estagnação e necessidade de replanejamento.
+
+    - Calculate State(success, cube_status, ee_status)
+      Determina o estado geral da tarefa.
+
+    Use os valores do monitor_output para montar os parâmetros corretos de cada ferramenta.
+    Não invente valores.
+    Utilize os resultados das ferramentas para preencher:
+    state, progress, cube_status, ee_status, target_reached e need_replan.e
+    
+  expected_output: >
+    "Return ONLY a JSON.
+
+    {
+        "state":"",
+        "progress":0,
+        "cube_status":"",
+        "ee_status":"",
+        "target_reached":false,
+        "need_replan":false,
+    }"
+
+  agent: analyser_agent
+
+analysis_diagnosis:
+  description: >
+    Compare o estado atual do sistema (`metrics_analyser`) com o histórico de análises (`query_knowledge_base`).
+
+    Objetivo:
+    Gerar um diagnóstico do sistema identificando possíveis anomalias, sintomas, urgência e explicação.
+
+    Regras:
+
+    * Utilize os resultados de `metrics_analyser` e `query_knowledge_base`.
+    * Se não houver histórico, analise apenas o estado atual.
+    * Não recalcule métricas.
+    * Não utilize ferramentas de cálculo.
+    * Não invente valores.
+
+    Copie exatamente de `metrics_analyser` os campos:
+
+    * state
+    * progress
+    * cube_status
+    * ee_status
+    * target_reached
+    * need_replan
+
+    Preencha apenas:
+
+    * symptom
+    * urgency
+    * explanation
+    * anomalies
+
+    Os campos `symptom`, `urgency` e `explanation` nunca podem estar vazios.
+
+    Classificação:
+
+    * Se nenhuma anomalia for detectada:
+
+      * symptom = "none"
+      * urgency = "low"
+      * anomalies = []
+      * explanation = "Nenhuma anomalia foi detectada. O sistema está operando normalmente e o objetivo foi alcançado."
+
+    * Se houver anomalias:
+
+      * symptom: descrição do problema detectado.
+      * urgency: "low", "medium" ou "high".
+      * anomalies: lista das anomalias identificadas.
+      * explanation: justificativa detalhada baseada no estado atual e no histórico.
+
+    Retorne apenas o JSON final completo.
+
+
+  expected_output: >
+    "Return ONLY a JSON.
+
+    {
+        "state": "string",
+        "progress": 0,
+        "cube_status": "string",
+        "ee_status": "string",
+        "target_reached": boolean,
+        "need_replan": boolean,
+        "symptom": "string",
+        "urgency": "string",
+        "explanation": "string",
+        "anomalies": []
+    }
+
+  agent: analyser_agent
