@@ -53,11 +53,11 @@ class MAPEKExecutor:
         # --------------------
         # ANALYSER
         # --------------------
-        #analysis_output = self.analyser.crew().kickoff(
-        #    inputs={
-        #        "monitor_output": monitor_output
-        #    }
-        #)
+        analysis_output = self.analyser.crew().kickoff(
+            inputs={
+                "monitor_output": monitor_output
+            }
+        )
 
         # --------------------
         # UPDATE KNOWLEDGE BASE
@@ -66,13 +66,13 @@ class MAPEKExecutor:
             monitor_output
         )
 
-        #self.knowledge.update_analysis_history(
-        #    analysis_output
-        #)
+        self.knowledge.update_analysis_history(
+            analysis_output
+        )
 
         return {
             "monitor": monitor_output,
-        #    "analysis": analysis_output
+            "analysis": analysis_output
         }
 
     def execute(self):
