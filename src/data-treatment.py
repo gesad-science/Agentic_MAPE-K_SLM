@@ -243,6 +243,84 @@ for ep, step, bloco in padrao.findall(texto):
     linha["cube_vz"] = cube_lin[2]
 
     # ========================================================
+    # OBSTÁCULO NO CAMINHO
+    # ========================================================
+
+    m = re.search(
+        r"Obstáculo caminho\s*:\s*(\w+)\s*\(count:\s*(\d+)\)",
+        bloco
+    )
+
+    linha["obstacle_in_path"] = (
+        m.group(1).strip().upper() == "SIM"
+        if m else None
+    )
+
+    linha["obstacle_count"] = (
+        int(m.group(2))
+        if m else None
+    )
+
+    for nome_obs, tipo, massa, tamanho in re.findall(
+        r"Obstáculo \[([^\]]+)\]:\s*tipo=(\S+)\s+massa=([-\d\.]+)\s*kg\s+tamanho=\[([^\]]+)\]",
+        bloco
+    ):
+ 
+        dims = [
+            float(v.strip().replace("+", ""))
+            for v in tamanho.split(",")
+        ]
+ 
+        linha[f"{nome_obs}_type"] = tipo
+        linha[f"{nome_obs}_mass"] = float(massa)
+        linha[f"{nome_obs}_size_x"] = dims[0] if len(dims) > 0 else None
+        linha[f"{nome_obs}_size_y"] = dims[1] if len(dims) > 1 else None
+        linha[f"{nome_obs}_size_z"] = dims[2] if len(dims) > 2 else None
+
+    # ========================================================
+    # MESA
+    # ========================================================
+ 
+    m = re.search(
+        r"Mesa\s*:\s*([-\d\.]+)x([-\d\.]+)x([-\d\.]+)\s*m\s*offset_x=([-\d\.]+)",
+        bloco
+    )
+ 
+    linha["table_x"] = float(m.group(1)) if m else None
+    linha["table_y"] = float(m.group(2)) if m else None
+    linha["table_z"] = float(m.group(3)) if m else None
+    linha["table_offset_x"] = float(m.group(4)) if m else None
+
+    # ========================================================
+    # ROBÔ CONFIG
+    # ========================================================
+ 
+    m = re.search(
+        r"Robô config\s*:\s*control=(\S+)\s+block_gripper=(\S+)\s+base=\[([^\]]+)\]",
+        bloco
+    )
+ 
+    if m:
+ 
+        base = [
+            float(v.strip().replace("+", ""))
+            for v in m.group(3).split(",")
+        ]
+ 
+        linha["robot_control"] = m.group(1)
+        linha["robot_block_gripper"] = m.group(2) == "True"
+        linha["robot_base_x"] = base[0] if len(base) > 0 else None
+        linha["robot_base_y"] = base[1] if len(base) > 1 else None
+        linha["robot_base_z"] = base[2] if len(base) > 2 else None
+ 
+    else:
+        linha["robot_control"] = None
+        linha["robot_block_gripper"] = None
+        linha["robot_base_x"] = None
+        linha["robot_base_y"] = None
+        linha["robot_base_z"] = None
+
+    # ========================================================
     # TODOS OS TARGETS DO GOAL_SEQUENCE
     # ========================================================
 

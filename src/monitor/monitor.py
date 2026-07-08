@@ -45,7 +45,16 @@ class Monitor:
                 float(row.joint_vel_5),
                 float(row.joint_vel_6),
                 float(row.joint_vel_7)
-            ]
+            ],
+            "configs": {
+                "control": row.robot_control,
+                "block_gripper": bool(row.block_gripper),
+                "base_position": [
+                    float(row.robot_base_x),
+                    float(row.robot_base_y),
+                    float(row.robot_base_z)
+                ]
+            }
         }
 
         cube = {
@@ -112,6 +121,27 @@ class Monitor:
             }
         }
 
+        obstacle = {
+            "presence": bool(row.obstacle_in_path),
+            "count": int(row.obstacle_count),
+            "type": row.obstacle_1_type,
+            "mass": float(row.obstacle_1_mass),
+            "size": [
+                float(row.obstacle_1_size_x),
+                float(row.obstacle_1_size_y),
+                float(row.obstacle_1_size_z)
+            ]
+        }
+
+        table = {
+            "position": [
+                float(row.table_x),
+                float(row.table_y),
+                float(row.table_z)
+            ],
+            "offset": float(row.table_offset)
+        }
+
         states = {
             "action": action,
             "robot": robot,
@@ -139,6 +169,8 @@ class Monitor:
             "robot": robot,
             "cube": cube,
             "target": target,
+            "obstacle": obstacle,
+            "table": table,
             "goals": goals,
             "metrics": metrics,
             "events": events
