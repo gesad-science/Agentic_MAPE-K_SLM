@@ -1,0 +1,463 @@
+import re
+import ast
+import numpy as np
+import pandas as pd
+
+ARQUIVO_LOG = "data/caminho-com-obstaculo-grande-demais.log.txt"
+ARQUIVO_CSV = "data/caminho-obstaculo-grande.csv"
+
+# ============================================================
+# FUNÇÕES AUXILIARES
+# ============================================================
+
+def extrair_vetor(nome, bloco, tamanho):
+    m = re.search(
+        rf"{re.escape(nome)}\s*:\s*\[([^\]]+)\]",
+        bloco
+    )
+
+    if not m:
+        return [None] * tamanho
+
+    valores = [
+        float(x.strip().replace("+", ""))
+        for x in m.group(1).split(",")
+    ]
+
+    while len(valores) < tamanho:
+        valores.append(None)
+
+    return valores[:tamanho]
+
+
+def extrair_numero(nome, bloco):
+    m = re.search(
+        rf"{re.escape(nome)}\s*:\s*([-\d\.]+)",
+        bloco
+    )
+
+    return float(m.group(1)) if m else None
+
+
+# ============================================================
+# LEITURA
+# ============================================================
+
+with open(ARQUIVO_LOG, "r", encoding="utf-8") as f:
+    texto = f.read()
+
+# ============================================================
+# SEPARA CADA STEP
+# ============================================================
+
+padrao = re.compile(
+    r"Ep\s+(\d+)\s+\|\s+Step\s+(\d+)(.*?)(?=Ep\s+\d+\s+\|\s+Step\s+\d+|$)",
+    re.S
+)
+
+registros = []
+
+for ep, step, bloco in padrao.findall(texto):
+
+    linha = {
+        "episode": int(ep),
+        "step": int(step)
+    }
+
+    # ========================================================
+    # TASK
+    # ========================================================
+
+    m = re.search(r"Task\s*:\s*(.+)", bloco)
+    linha["task"] = m.group(1).strip() if m else None
+
+    # ========================================================
+    # ACTION
+    # ========================================================
+
+    action = extrair_vetor("Action", bloco, 4)
+
+    linha["action_x"] = action[0]
+    linha["action_y"] = action[1]
+    linha["action_z"] = action[2]
+    linha["action_gripper"] = action[3]
+
+    # ========================================================
+    # EE POSITION
+    # ========================================================
+
+    ee = extrair_vetor("EE posição", bloco, 3)
+
+    linha["ee_x"] = ee[0]
+    linha["ee_y"] = ee[1]
+    linha["ee_z"] = ee[2]
+
+    # ========================================================
+    # EE VELOCITY
+    # ========================================================
+
+    ee_vel = extrair_vetor("EE velocidade", bloco, 3)
+
+    linha["ee_vx"] = ee_vel[0]
+    linha["ee_vy"] = ee_vel[1]
+    linha["ee_vz"] = ee_vel[2]
+
+    # ========================================================
+    # GARRA
+    # ========================================================
+
+    m = re.search(
+        r"Garra\s*:\s*([-\d\.]+)\s*m\s*\(([^)]+)\)",
+        bloco
+    )
+
+    linha["gripper_width"] = float(m.group(1)) if m else None
+    linha["gripper_state"] = m.group(2).strip() if m else None
+
+    # ========================================================
+    # CUBE POSITION
+    # ========================================================
+
+    cube = extrair_vetor("Cubo posição", bloco, 3)
+
+    linha["cube_x"] = cube[0]
+    linha["cube_y"] = cube[1]
+    linha["cube_z"] = cube[2]
+
+    # ========================================================
+    # TARGET ATIVO
+    # ========================================================
+
+    target_match = re.search(
+        r"Target \(([^)]+)\):\s*\[([^\]]+)\]",
+        bloco
+    )
+
+    if target_match:
+
+        target_name = target_match.group(1)
+
+        target_pos = [
+            float(v.strip().replace("+", ""))
+            for v in target_match.group(2).split(",")
+        ]
+
+        linha["active_target_name"] = target_name
+
+        if target_name == "target":
+            linha["active_target_index"] = 0
+        else:
+            try:
+                linha["active_target_index"] = int(
+                    target_name.split("_")[1]
+                )
+            except:
+                linha["active_target_index"] = None
+
+        linha["target_x"] = target_pos[0]
+        linha["target_y"] = target_pos[1]
+        linha["target_z"] = target_pos[2]
+
+    # ========================================================
+    # DISTÂNCIAS
+    # ========================================================
+
+    linha["dist_ee_cube"] = extrair_numero(
+        "Dist EE→Cubo",
+        bloco
+    )
+
+    m = re.search(
+        r"Dist Cubo→[^:]+:\s*([-\d\.]+)",
+        bloco
+    )
+
+    linha["dist_cube_target"] = (
+        float(m.group(1))
+        if m else None
+    )
+
+    # ========================================================
+    # REWARD
+    # ========================================================
+
+    linha["reward"] = extrair_numero(
+        "Reward",
+        bloco
+    )
+
+    # ========================================================
+    # SUCCESS
+    # ========================================================
+
+    m = re.search(
+        r"Sucesso\s*:\s*(True|False)",
+        bloco
+    )
+
+    linha["success"] = (
+        m.group(1) == "True"
+        if m else None
+    )
+
+    # ========================================================
+    # OBSTÁCULO NO CAMINHO
+    # ========================================================
+
+    m = re.search(
+        r"Obstáculo caminho\s*:\s*(\w+)\s*\(count:\s*(\d+)\)",
+        bloco
+    )
+
+    linha["obstacle_in_path"] = (
+        m.group(1).strip().upper() == "SIM"
+        if m else None
+    )
+
+    linha["obstacle_count"] = (
+        int(m.group(2))
+        if m else None
+    )
+
+    # ========================================================
+    # OBSTÁCULOS (um ou mais: obstacle_1, obstacle_2, ...)
+    # ========================================================
+
+    for nome_obs, tipo, massa, tamanho in re.findall(
+        r"Obstáculo \[([^\]]+)\]:\s*tipo=(\S+)\s+massa=([-\d\.]+)\s*kg\s+tamanho=\[([^\]]+)\]",
+        bloco
+    ):
+
+        dims = [
+            float(v.strip().replace("+", ""))
+            for v in tamanho.split(",")
+        ]
+
+        linha[f"{nome_obs}_type"] = tipo
+        linha[f"{nome_obs}_mass"] = float(massa)
+        linha[f"{nome_obs}_size_x"] = dims[0] if len(dims) > 0 else None
+        linha[f"{nome_obs}_size_y"] = dims[1] if len(dims) > 1 else None
+        linha[f"{nome_obs}_size_z"] = dims[2] if len(dims) > 2 else None
+
+    # ========================================================
+    # OBJETOS (um ou mais: object_1, object_2, ...)
+    # ========================================================
+
+    for nome_obj, tipo, massa, tamanho in re.findall(
+        r"Objeto \[([^\]]+)\]:\s*tipo=(\S+)\s+massa=([-\d\.]+)\s*kg\s+tamanho=\[([^\]]+)\]",
+        bloco
+    ):
+
+        dims = [
+            float(v.strip().replace("+", ""))
+            for v in tamanho.split(",")
+        ]
+
+        linha[f"{nome_obj}_type"] = tipo
+        linha[f"{nome_obj}_mass"] = float(massa)
+        linha[f"{nome_obj}_size_x"] = dims[0] if len(dims) > 0 else None
+        linha[f"{nome_obj}_size_y"] = dims[1] if len(dims) > 1 else None
+        linha[f"{nome_obj}_size_z"] = dims[2] if len(dims) > 2 else None
+
+    # ========================================================
+    # MESA
+    # ========================================================
+
+    m = re.search(
+        r"Mesa\s*:\s*([-\d\.]+)x([-\d\.]+)x([-\d\.]+)\s*m\s*offset_x=([-\d\.]+)",
+        bloco
+    )
+
+    linha["table_x"] = float(m.group(1)) if m else None
+    linha["table_y"] = float(m.group(2)) if m else None
+    linha["table_z"] = float(m.group(3)) if m else None
+    linha["table_offset_x"] = float(m.group(4)) if m else None
+
+    # ========================================================
+    # ROBÔ CONFIG
+    # ========================================================
+
+    m = re.search(
+        r"Robô config\s*:\s*control=(\S+)\s+block_gripper=(\S+)\s+base=\[([^\]]+)\]",
+        bloco
+    )
+
+    if m:
+
+        base = [
+            float(v.strip().replace("+", ""))
+            for v in m.group(3).split(",")
+        ]
+
+        linha["robot_control"] = m.group(1)
+        linha["robot_block_gripper"] = m.group(2) == "True"
+        linha["robot_base_x"] = base[0] if len(base) > 0 else None
+        linha["robot_base_y"] = base[1] if len(base) > 1 else None
+        linha["robot_base_z"] = base[2] if len(base) > 2 else None
+
+    else:
+        linha["robot_control"] = None
+        linha["robot_block_gripper"] = None
+        linha["robot_base_x"] = None
+        linha["robot_base_y"] = None
+        linha["robot_base_z"] = None
+
+    # ========================================================
+    # SCRIPTS
+    # ========================================================
+
+    m = re.search(
+        r"Scripts\s*:\s*(\[[^\]]*\])",
+        bloco
+    )
+
+    if m:
+        try:
+            scripts = ast.literal_eval(m.group(1))
+            linha["scripts"] = "|".join(scripts)
+        except Exception:
+            linha["scripts"] = None
+    else:
+        linha["scripts"] = None
+
+    # ========================================================
+    # JOINTS
+    # ========================================================
+
+    joints = extrair_vetor(
+        "Juntas ângulos",
+        bloco,
+        7
+    )
+
+    for i, valor in enumerate(joints):
+        linha[f"joint_{i+1}"] = valor
+
+    # ========================================================
+    # JOINT VELOCITIES
+    # ========================================================
+
+    joints_vel = extrair_vetor(
+        "Juntas veloc.",
+        bloco,
+        7
+    )
+
+    for i, valor in enumerate(joints_vel):
+        linha[f"joint_vel_{i+1}"] = valor
+
+    # ========================================================
+    # CUBE ROTATION
+    # ========================================================
+
+    cube_rot = extrair_vetor(
+        "Cubo rotação",
+        bloco,
+        3
+    )
+
+    linha["cube_roll"] = cube_rot[0]
+    linha["cube_pitch"] = cube_rot[1]
+    linha["cube_yaw"] = cube_rot[2]
+
+    # ========================================================
+    # CUBE LINEAR VELOCITY
+    # ========================================================
+
+    cube_lin = extrair_vetor(
+        "Cubo vel.linear",
+        bloco,
+        3
+    )
+
+    linha["cube_vx"] = cube_lin[0]
+    linha["cube_vy"] = cube_lin[1]
+    linha["cube_vz"] = cube_lin[2]
+
+    # ========================================================
+    # TODOS OS TARGETS DO GOAL_SEQUENCE
+    # ========================================================
+
+    m = re.search(
+        r"Target goal\s*:\s*(\{.*?\})\s*\n",
+        bloco,
+        re.S
+    )
+
+    if m:
+
+        try:
+            goal = ast.literal_eval(
+                m.group(1)
+            )
+
+            linha["goal_mode"] = goal.get("mode")
+
+            targets = goal.get(
+                "targets",
+                []
+            )
+
+            linha["goal_n_targets"] = len(targets)
+
+            for idx, tgt in enumerate(targets):
+
+                pos = tgt["position"]
+
+                linha[f"goal_{idx}_name"] = tgt.get("name")
+                linha[f"goal_{idx}_x"] = pos[0]
+                linha[f"goal_{idx}_y"] = pos[1]
+                linha[f"goal_{idx}_z"] = pos[2]
+
+                if (
+                    cube[0] is not None
+                    and cube[1] is not None
+                    and cube[2] is not None
+                ):
+
+                    dist = np.linalg.norm([
+                        cube[0] - pos[0],
+                        cube[1] - pos[1],
+                        cube[2] - pos[2]
+                    ])
+
+                    linha[f"dist_goal_{idx}"] = dist
+
+        except Exception:
+            pass
+
+    registros.append(linha)
+
+# ============================================================
+# DATAFRAME
+# ============================================================
+
+df = pd.DataFrame(registros)
+
+# ============================================================
+# DETECTA TROCA DE TARGET
+# ============================================================
+
+df["target_changed"] = (
+    df["active_target_name"]
+    != df["active_target_name"].shift(1)
+)
+
+# ============================================================
+# TIMESTEP GLOBAL
+# ============================================================
+
+df["timestep"] = np.arange(len(df))
+
+# ============================================================
+# SALVA CSV
+# ============================================================
+
+df.to_csv(
+    ARQUIVO_CSV,
+    index=False
+)
+
+print(f"CSV salvo em: {ARQUIVO_CSV}")
+print(df.head())
+print(f"\nTotal de registros: {len(df)}")
