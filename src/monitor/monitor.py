@@ -48,7 +48,7 @@ class Monitor:
             ],
             "configs": {
                 "control": row.robot_control,
-                "block_gripper": bool(row.block_gripper),
+                "block_gripper": bool(row.robot_block_gripper),
                 "base_position": [
                     float(row.robot_base_x),
                     float(row.robot_base_y),
@@ -139,7 +139,7 @@ class Monitor:
                 float(row.table_y),
                 float(row.table_z)
             ],
-            "offset": float(row.table_offset)
+            "offset": float(row.table_offset_x)
         }
 
         states = {
