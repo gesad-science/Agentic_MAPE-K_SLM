@@ -7,6 +7,16 @@ class Monitor:
         self.knowledge_base = KnowledgeBase()
 
     def process(self, row):
+        action = {
+            "task": str(row.task),
+            "position": [
+                float(row.action_x),
+                float(row.action_y),
+                float(row.action_z)
+            ],
+            "gripper": float(row.action_gripper)
+        }
+
         robot = {
             "position": [
                 float(row.ee_x),
@@ -63,13 +73,51 @@ class Monitor:
                 float(row.target_x),
                 float(row.target_y),
                 float(row.target_z)
-            ]
+            ],
+            "changed": bool(row.target_changed)
+        }
+
+        goals = {
+            "goal_0": {
+                "position": [
+                    float(row.goal_0_x),
+                    float(row.goal_0_y),
+                    float(row.goal_0_z)
+                ],
+                "distance": float(row.dist_goal_0)
+            },
+            "goal_1": {
+                "position": [
+                    float(row.goal_1_x),
+                    float(row.goal_1_y),
+                    float(row.goal_1_z)
+                ],
+                "distance": float(row.dist_goal_1)
+            },
+            "goal_2": {
+                "position": [
+                    float(row.goal_2_x),
+                    float(row.goal_2_y),
+                    float(row.goal_2_z)
+                ],
+                "distance": float(row.dist_goal_2)
+            },
+            "goal_3": {
+                "position": [
+                    float(row.goal_3_x),
+                    float(row.goal_3_y),
+                    float(row.goal_3_z)
+                ],
+                "distance": float(row.dist_goal_3)
+            }
         }
 
         states = {
+            "action": action,
             "robot": robot,
             "cube": cube,
-            "target": target
+            "target": target,
+            "goals": goals
         }
 
         metrics = {
@@ -87,9 +135,11 @@ class Monitor:
         return {
             "episode": int(row.episode),
             "step": int(row.step),
+            "action": action,
             "robot": robot,
             "cube": cube,
             "target": target,
+            "goals": goals,
             "metrics": metrics,
             "events": events
         }
