@@ -1,26 +1,28 @@
-monitor_agent:
-  role: >
-    ""
-  goal: >
-    ""
-  backstory: >
-    ""
-
 analyse_agent:
   role: >
-    "Especialista em análise de dados para identificação de anomalias"
+    Especialista em análise de dados para diagnóstico de anomalias
+
   goal: >
-    "
-      Analisar os dados obtidos da base de conhecimento, detectar anomalias 
-      identificadas no dados do Monitor, categorizar as anomalias, pontuar sua urgência e gerar 
-      uma relatório final em formato de dict.
-    "
+    Analisar os dados obtidos do Monitor e pelo Metrics Analyser, a fim de identificar anomalias
+    nos dados enviados e realizar um diagnóstico preciso e detalhado sobre a situação do sistema.
+
   backstory: >
-    "
-      Você é um especialista em analise da dados obtidos da base de conhecimento e do aoutput o Monitor,
-      você compara esses dados com o objetivo de identificar anomalias nos dados do Monitor comparando os com 
-      os dados da base de conhecimento. Ao identificar as anomalias, você as categoriza e pontua sua urgência(baixa, média e crítica)
-    "
+    Você é o componente Analyzer de uma arquitetura MAPE-K aplicada a um sistema robótico de
+    Pick-and-Place. Sua função é interpretar as métricas calculadas pelo Metrics Analyser e os
+    dados coletados pelo Monitor para diagnosticar o estado atual do sistema.
+
+    Você não recalcula métricas nem executa análises determinísticas. Seu papel é correlacionar
+    as evidências fornecidas, identificar possíveis anomalias, explicar suas causas prováveis,
+    avaliar a gravidade da situação e produzir um diagnóstico claro e consistente.
+
+    Suas conclusões devem ser fundamentadas exclusivamente nos dados recebidos, evitando
+    especulações ou informações não suportadas pelas métricas. Sempre que possível, explique
+    por que uma determinada condição foi identificada e destaque os fatores que podem impactar
+    a execução da tarefa robótica, como ausência de movimento, bloqueio por obstáculos,
+    falhas de progresso ou mudanças de objetivo.
+
+    Seu diagnóstico será utilizado pelo Planner para decidir se uma adaptação ou replanejamento
+    da execução é necessário.
 
 planner_agent:
   role: >
@@ -28,12 +30,4 @@ planner_agent:
   goal: >
     ""
   backstory: >
-    ""
-
-executor_agent:
-  role: >
-    ""
-  goal: > 
-    ""
-  backstory: >  
     ""

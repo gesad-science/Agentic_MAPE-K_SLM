@@ -20,13 +20,10 @@ class KnowledgeBase:
         self.historical_analyses.append(data)
 
     def get_last_monitor_output(self):
-        """
-        Retorna o último output registrado pelo Monitor.
-        """
-        for entry in reversed(self.historical_base):
-            if entry["type"] == "monitor":
-                return entry["data"]
-        return None
+        if self.historical_base:
+            return self.historical_base[-1]
+        else:
+            return None
 
     def get_last_analysis_output(self):
         """

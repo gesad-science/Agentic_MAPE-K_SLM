@@ -1,109 +1,24 @@
 analysis:
   description: >
-    You are responsible for analyzing the current system state using
-    the current monitor output and historical information.
+    Analisar os dados obtidos do Monitor e pelo Metrics Analyser, a fim de identificar anomalias
+    nos dados enviados e realizar um diagnostico preciso e detalhado sobre a situação do sistema.
+    Além de gerar um diagnostico claro e consistente, que será utilizado pelo Planner para decidir 
+    se uma adaptação ou replanejamento da execução é necessário.
 
-    ```
-    INPUT:
+    Ultilize esses dados para um melhor diagnóstico:
+    {monitor_output}
+    {metrics_output}
 
-    - Current monitor output:
-      {monitor_output}
-
-    AVAILABLE TOOLS:
-
-    1. Get Last Monitor Output
-
-    2. Get Last Analysis Output
-
-    3. Is Cube Moving
-      Input:
-      - cube_velocity = monitor_output.cube.velocity
-
-    4. Is Cube Getting Closer To Target
-      Input:
-      - current_distance = monitor_output.metrics.dist_cube_target
-      - previous_distance = value retrieved from
-        Get Last Monitor Output
-
-    5. Get Current Target
-      Input:
-      - target = monitor_output.target
-
-    INSTRUCTIONS:
-
-    STEP 1:
-    Retrieve the previous monitor output using
-    "Get Last Monitor Output".
-
-    STEP 2:
-    Extract cube velocity from the current monitor output and use
-    "Is Cube Moving".
-
-    STEP 3:
-    Extract the previous distance from the historical monitor output.
-
-    STEP 4:
-    Use "Is Cube Getting Closer To Target" with:
-
-    - current_distance
-    - previous_distance
-
-    STEP 5:
-    Use "Get Current Target" with monitor_output.target.
-
-    STEP 6:
-    Using the generated metrics and any available historical
-    information, determine whether the cube behavior is normal or
-    abnormal.
-
-    Determine:
-
-    - symptom
-    - urgency
-    - explanation
-    - anomalies
-
-    DIAGNOSIS RULES:
-
-    Normal operation:
-
-    - symptom = "none"
-    - urgency = "low"
-    - anomalies = []
-
-    The explanation must clearly state why the cube behavior is
-    considered normal.
-
-    Abnormal operation:
-
-    - symptom must describe the detected issue.
-    - urgency must be one of:
-      - low
-      - medium
-      - high
-    - anomalies must contain the detected issues.
-    - explanation must justify the diagnosis using the computed
-      metrics and historical information whenever available.
-
-    RULES:
-
-    - Never compute manually what a tool can compute.
-    - Never invent historical data.
-    - Never invent tool outputs.
-    - If historical data is unavailable, use only the current
-      monitor output.
-    - Return ONLY valid JSON.
-    ```
+    The urgency of the situation should be classified as "low", "medium" or "high". 
+    The diagnosis should be a clear and concise summary of the current state of the system, 
+    highlighting any anomalies or issues that have been identified. 
+    The anomalies should be a boolean value indicating whether any anomalies were detected in the data.
 
   expected_output: >
     {
-      "cube_status": true,
-      "cube_target_trend": "closer",
-      "current_target": "target_name",
-      "symptom": "none",
-      "urgency": "low",
-      "explanation": "The cube is behaving as expected and no anomalies were detected.",
-      "anomalies": []
+      "urgency": 
+      "diagnosis": 
+      "anomalies": 
     }
 
   agent: analyser_agent

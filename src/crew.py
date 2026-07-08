@@ -1,14 +1,7 @@
 from crewai.knowledge.source.csv_knowledge_source import CSVKnowledgeSource
 from crewai import LLM, Agent, Task, Crew, Process
 from crewai.project import CrewBase, task, crew, agent
-import yaml, os
-from tools import (
-    get_last_monitor_output,
-    get_last_analysis_output,
-    get_current_target,
-    is_cube_moving,
-    is_cube_getting_closer_to_target
-) 
+
 
 llm = LLM(model="ollama/qwen2.5:7b", temperature=0)
 
@@ -25,19 +18,11 @@ class AnalyserCrew:
         return Agent(
             config=self.agents_config["analyse_agent"],
             verbose=True,
-            tools=[
-                get_last_monitor_output,
-                get_last_analysis_output,
-                get_current_target,
-                is_cube_moving,
-                is_cube_getting_closer_to_target,
-
-            ],
             llm=llm,
         )
 
     @task
-    def analysi(self) -> Task:
+    def analysis(self) -> Task:
         return Task(
             config=self.tasks_config["analysis"],
             agent=self.analyser_agent(),
@@ -57,9 +42,7 @@ class AnalyserCrew:
     def crew(self) -> Crew:
         return Crew(
             agents=[self.analyser_agent()],  
-            tasks=[
-                self.analysi(),
-                ],
+            tasks=[self.analysis()],
             process=Process.sequential,
             verbose=True
         )

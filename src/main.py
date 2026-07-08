@@ -4,6 +4,7 @@ from crew import AnalyserCrew
 from knowledgeBase import knowledge_base
 from monitor.monitor import Monitor
 from monitor.reader import CSVReader
+from metrics_analyser import MetricsAnalyser
 
 
 def convert_numpy(obj):
@@ -35,6 +36,7 @@ class MAPEKExecutor:
         self.monitor = Monitor()
         self.knowledge = knowledge_base
         self.analyser = AnalyserCrew()
+        self.metrics_analyser = MetricsAnalyser(self.knowledge)
 
     def execute_step(self):
 
@@ -49,20 +51,24 @@ class MAPEKExecutor:
         monitor_output = convert_numpy(
             self.monitor.process(row)
         )
+        print("Monitor output:", monitor_output)
 
+        metrics_output = self.metrics_analyser.execute(monitor_output)
+        print("Metrics Analyser output:", metrics_output)
         # --------------------
         # ANALYSER
         # --------------------
         analysis_output = self.analyser.crew().kickoff(
             inputs={
-                "monitor_output": monitor_output
+                "monitor_output": monitor_output,
+                "metrics_output": metrics_output
             }
         )
 
         # --------------------
         # UPDATE KNOWLEDGE BASE
         # --------------------
-        self.knowledge. update_history(
+        self.knowledge.update_history(
             monitor_output
         )
 
@@ -70,10 +76,7 @@ class MAPEKExecutor:
             analysis_output
         )
 
-        return {
-            "monitor": monitor_output,
-            "analysis": analysis_output
-        }
+        return analysis_output 
 
     def execute(self):
 
@@ -88,13 +91,13 @@ class MAPEKExecutor:
 
             results.append(result)
 
-            print("=" * 60)
-            print("MONITOR")
-            print(result["monitor"])
-            print()
+            # print("=" * 60)
+            # print("MONITOR")
+            # print(result["monitor"])
+            # print()
 
-            print("ANALYSIS")
-            print(result["analysis"])
+            # print("ANALYSIS")
+            # print(result["analysis"])
 
         return results
     
@@ -102,7 +105,7 @@ class MAPEKExecutor:
         return self.knowledge
     
 executor = MAPEKExecutor(
-    "data/caminho-obstaculo-conhecido.csv"
+    "src/data/caminho-obstaculo-conhecido.csv"
 )
 
 results = executor.execute()
