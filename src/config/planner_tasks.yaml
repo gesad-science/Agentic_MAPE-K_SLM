@@ -7,9 +7,8 @@ planning_task:
 
     **Your Reasoning Process:**
     1.  **Understand the Problem:** Analyze the `issue_type` and `details` from the diagnosis to understand the robot's current situation. The `issue_type` is generated dynamically and might be something you've never seen before.
-    2.  **Know Your Options:** Use the `list_available_tactics` tool to get a list of all high-level strategies you can execute.
-    3.  **Select Relevant Tactics:** Based on the `issue_type`, decide which of the available tactics are relevant to solve the problem. For example, if the problem is a blockage, evasion tactics are more relevant than continuing to push.
-    4.  **Simulate Chosen Tactics:** For each tactic you considered relevant, use the `simulate_action` tool to predict the outcome. Use the exact values from the diagnosis (`issue_type`, `current_task`, `dist_cube_target`) for the simulation.
+    2.  **Know Your Options:** Use the `enumerate_tactics` tool with the `issue_type` to get a list of preferred strategies from the Knowledge Base.
+    3.  **Simulate Chosen Tactics:** For each tactic returned, use the `simulate_action` tool to predict its success. Use the exact values from the diagnosis (`issue_type`, `current_task`, `dist_cube_target`) for the simulation.
     5.  **Decide the Best Strategy:** Compare the simulation results. Choose the SINGLE tactic that offers the highest `predicted_success`.
     6.  **Generate the Final Plan:** Use the `generate_plan` tool. You must provide both the `selected_tactic` and a `reasoning` string that explains *why* you chose this tactic over the others, based on the simulation results.
 

@@ -3,7 +3,7 @@ from crewai import LLM, Agent, Task, Crew, Process
 from crewai.project import CrewBase, task, crew, agent
 from tools import (
     QueryKnowledgeBaseTool,
-    ListAvailableTacticsTool,
+    EnumerateTacticsTool,
     SimulateActionTool,
     GeneratePlanTool
 )
@@ -60,7 +60,7 @@ class PlannerCrew:
             config=self.agents_config['planner_agent'],
             tools=[
                 QueryKnowledgeBaseTool(),
-                ListAvailableTacticsTool(),
+                EnumerateTacticsTool(),
                 SimulateActionTool(),
                 GeneratePlanTool()
             ],

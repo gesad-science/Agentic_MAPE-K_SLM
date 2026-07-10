@@ -196,22 +196,17 @@ class QueryKnowledgeBaseTool(BaseTool):
         return json.dumps(knowledge_base.query(issue_type), ensure_ascii=False)
 
 
-class ListAvailableTacticsTool(BaseTool):
-    name: str = "list_available_tactics"
+class EnumerateTacticsTool(BaseTool):
+    name: str = "enumerate_tactics"
     description: str = (
-        "Lists all available high-level tactics the planner can use to form a plan."
+        "Enumerates the possible tactics for the current problem based on internal policies. "
+        "Use the exact value of the 'name' field returned by this tool in subsequent calls."
     )
+    args_schema: Type[BaseModel] = QueryKnowledgeBaseInput
 
-    def _run(self) -> str:
-        # The source of truth for available tactics are the keys in the GeneratePlanTool's plan_map.
-        # This ensures any listed tactic can be converted into a plan.
-        plan_map_keys = [
-            "continue_push",
-            "switch_to_pick_and_place",
-            "switch_to_reach",
-            "activate_script_left_right",
-            "hold_position",
-        ]
+    def _run(self, issue_type: str) -> str:
+        policy = knowledge_base.query(issue_type).get("policy", {})
+        preferred = policy.get("preferred", [])
         catalog = {
             "continue_push": "Continue the PUSH task towards the active target.",
             "switch_to_pick_and_place": "Switch to PICK_AND_PLACE.",
@@ -219,7 +214,7 @@ class ListAvailableTacticsTool(BaseTool):
             "activate_script_left_right": "Use scripted side-to-side recovery behavior.",
             "hold_position": "Safely maintain the current state.",
         }
-        tactics = [{"name": t, "description": catalog[t]} for t in plan_map_keys if t in catalog]
+        tactics = [{"name": t, "description": catalog[t]} for t in preferred if t in catalog]
         return json.dumps(tactics, ensure_ascii=False)
 
 
@@ -234,7 +229,7 @@ class SimulateActionTool(BaseTool):
     name: str = "simulate_action"
     description: str = (
         "Simulates a tactic and estimates its success score. "
-        "The tactic_name field must be exactly one of the names returned by list_available_tactics."
+        "The tactic_name field must be exactly one of the names returned by enumerate_tactics."
     )
     args_schema: Type[BaseModel] = SimulateActionInput
 
@@ -249,11 +244,23 @@ class SimulateActionTool(BaseTool):
             "activate_script_left_right": 0.50,
             "hold_position": 0.20,
         }
+        cost_map = {
+            "continue_push": 0.20,
+            "switch_to_pick_and_place": 0.55,
+            "switch_to_reach": 0.15,
+            "activate_script_left_right": 0.35,
+            "hold_position": 0.05,
+        }
 
         score = base_map.get(tactic_name, 0.30)
+        cost = cost_map.get(tactic_name, 0.25)
+
         for row in history:
             if row.get("strategy") == tactic_name:
                 score = (score + row["success_rate"]) / 2
+                # If historical cost data is available, use it
+                if "cost" in row:
+                    cost = row["cost"]
 
         if issue_type == "goal_not_reached_yet":
             if tactic_name == "continue_push" and current_task == "PUSH" and dist_cube_target <= 0.12:
@@ -268,10 +275,14 @@ class SimulateActionTool(BaseTool):
                 score += 0.03
 
         score = max(0.0, min(score, 1.0))
+        # A pontuação final equilibra o sucesso com o custo. Um custo maior penaliza a pontuação.
+        final_score = score - (0.25 * cost) # O peso 0.25 pode ser ajustado
 
         result = {
             "tactic": tactic_name,
             "predicted_success": round(score, 3),
+            "estimated_cost": round(cost, 3),
+            "final_score": round(final_score, 3),
         }
         return json.dumps(result, ensure_ascii=False)
 
