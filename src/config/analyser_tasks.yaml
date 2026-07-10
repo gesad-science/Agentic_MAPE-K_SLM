@@ -1,0 +1,29 @@
+analysis:
+  description: >
+    Analyze the data from the Monitor and Metrics Analyser to identify anomalies
+    and provide a precise and detailed diagnosis of the system's situation. Your diagnosis will be
+    used by the Planner to decide if an adaptation or replanning is necessary.
+
+    Based on the data from {monitor_output} and {metrics_output}, you must:
+    1. Detect if there is an anomaly (`anomalies`),should be a boolean value indicating whether any anomalies were detected in the data.
+    2. Classify the problem type (`issue_type`) dynamically and descriptively (e.g., 'goal_not_reached_yet', 'path_blocked', 'gripper_failure').
+    3. Assess the problem's urgency (`urgency`) as "low", "medium", or "high".
+    4. Estimate a confidence level (`confidence`) for your diagnosis (from 0.0 to 1.0).
+    5. Provide a clear and concise summary of the current system state in `diagnosis`.
+    6. Provide a `details` dictionary with the following keys and values extracted from `monitor_output`: `current_task`, `dist_cube_target`. These values are essential for the planner.
+
+  expected_output: >
+    A valid JSON containing the diagnosis in the following format. Do not include any text or markdown before or after the JSON.
+    {
+      "anomalies": false,
+      "issue_type": "string",
+      "urgency": "string",
+      "confidence": 0.0,
+      "diagnosis": "string",
+      "details": {
+        "current_task": "string",
+        "dist_cube_target": 0.0
+      }
+    }
+
+  agent: analyser_agent

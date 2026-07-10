@@ -1,10 +1,12 @@
 import numpy as np
+import json
 
-from crew import AnalyserCrew
+from crew import AnalyserCrew, PlannerCrew
 from knowledgeBase import knowledge_base
 from monitor.monitor import Monitor
 from monitor.reader import CSVReader
 from metrics_analyser import MetricsAnalyser
+from executor import Executor
 
 
 def convert_numpy(obj):
@@ -37,77 +39,98 @@ class MAPEKExecutor:
         self.knowledge = knowledge_base
         self.analyser = AnalyserCrew()
         self.metrics_analyser = MetricsAnalyser(self.knowledge)
+        self.planner = PlannerCrew()
+        self.executor = Executor()
 
-    def execute_step(self):
+    def execute_step(self, current_state: dict | None):
+        if current_state is None:
+            # First step: read from the CSV file
+            row = self.reader.next()
+            if row is None:
+                return None, True  # End of data
+            
+            # --------------------
+            # MONITOR
+            # --------------------
+            monitor_output = convert_numpy(
+                self.monitor.process(row)
+            )
+        else:
+            print("--- Using state from previous cycle's execution. ---")
+            # Subsequent steps: use the state from the previous cycle
+            monitor_output = current_state
 
-        row = self.reader.next()
-
-        if row is None:
-            return None
-
-        # --------------------
-        # MONITOR
-        # --------------------
-        monitor_output = convert_numpy(
-            self.monitor.process(row)
-        )
-        print("Monitor output:", monitor_output)
+        print("Monitor input for this cycle:", json.dumps(monitor_output, indent=2, default=str))
 
         metrics_output = self.metrics_analyser.execute(monitor_output)
-        print("Metrics Analyser output:", metrics_output)
         # --------------------
         # ANALYSER
         # --------------------
-        analysis_output = self.analyser.crew().kickoff(
+        analysis_crew_output = self.analyser.crew().kickoff(
             inputs={
                 "monitor_output": monitor_output,
                 "metrics_output": metrics_output
             }
         )
+        analysis_output = json.loads(analysis_crew_output.raw)
+        print("Analysis output:", json.dumps(analysis_output, indent=2, default=str))
 
+        # --------------------
+        # PLANNER
+        # --------------------
+        plan_crew_output = self.planner.crew().kickoff(
+            inputs={
+                "analysis_output": json.dumps(analysis_output, indent=2)
+            }
+        )
+        plan_output = json.loads(plan_crew_output.raw)
+
+        # --------------------
+        # EXECUTE
+        # --------------------
+        # The executor takes the plan and the current state to produce the *next* state.
+        next_state = self.executor.execute_plan(plan_output, monitor_output)
+        
         # --------------------
         # UPDATE KNOWLEDGE BASE
         # --------------------
-        self.knowledge.update_history(
-            monitor_output
-        )
+        self.knowledge.update_history(monitor_output)
+        self.knowledge.update_analysis_history(analysis_output)
 
-        self.knowledge.update_analysis_history(
-            analysis_output
-        )
+        # Check for termination condition
+        if next_state['metrics']['dist_cube_target'] < self.knowledge.data['goal_threshold']:
+            print("\n>>> GOAL REACHED! Terminating execution. <<<")
+            return {"monitor": monitor_output, "analysis": analysis_output, "plan": plan_output}, True
 
-        return analysis_output 
+        return next_state, False
 
     def execute(self):
 
         results = []
+        current_state = None
+        
+        for i in range(10): # Limit to 10 steps to prevent infinite loops during testing
+            print(f"\n\n--- MAPE-K Cycle {i+1} ---")
+            result, done = self.execute_step(current_state)
 
-        while True:
-
-            result = self.execute_step()
-
-            if result is None:
+            if done:
+                if result:
+                    results.append(result)
                 break
 
+            current_state = result
             results.append(result)
 
-            # print("=" * 60)
-            # print("MONITOR")
-            # print(result["monitor"])
-            # print()
-
-            # print("ANALYSIS")
-            # print(result["analysis"])
-
+            print("=" * 60)
+            print("END OF CYCLE REPORT")
+        
         return results
     
     def get_knowledge_base(self):
         return self.knowledge
     
 executor = MAPEKExecutor(
-    "src/data/caminho-obstaculo-conhecido.csv"
+    "data/caminho-obstaculo-conhecido.csv"
 )
 
 results = executor.execute()
-
-
