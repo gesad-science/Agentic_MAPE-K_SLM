@@ -1,0 +1,156 @@
+{
+  "episode": 1,
+  "step": 1,
+
+  "action": {
+    "task": "PICK_AND_PLACE",
+    "position": [
+      -0.108,
+      0.0,
+      -0.994
+    ],
+    "gripper": 1.0
+  },
+
+  "robot": {
+    "position": [
+      0.04,
+      0.0,
+      0.171
+    ],
+    "velocity": [
+      -0.265,
+      -0.001,
+      -1.261
+    ],
+    "joints": [
+      -0.0,
+      0.45,
+      0.0,
+      -1.88,
+      -0.0,
+      2.35,
+      0.79
+    ],
+    "joint_velocities": [
+      -0.0,
+      1.91,
+      0.0,
+      -0.24,
+      -0.01,
+      0.69,
+      -0.03
+    ],
+    "configs": {
+      "control": "ee",
+      "block_gripper": false,
+      "base_position": [
+        -0.6,
+        0.0,
+        0.05
+      ]
+    }
+  },
+
+  "cube": {
+    "position": [
+      0.03,
+      0.0,
+      0.02
+    ],
+    "orientation": [
+      0.0,
+      -0.0,
+      -0.0
+    ],
+    "velocity": [
+      -0.0,
+      0.0,
+      -0.0
+    ]
+  },
+
+  "target": {
+    "name": "target",
+    "index": 0,
+    "position": [
+      0.15,
+      0.0,
+      0.02
+    ],
+    "changed": true
+  },
+
+  "obstacle": {
+    "presence": true,
+    "count": 1,
+    "type": "box",
+    "mass": 0.0,
+    "size": [
+      0.02,
+      0.3,
+      0.1
+    ]
+  },
+
+  "table": {
+    "position": [
+      1.1,
+      0.7,
+      0.4
+    ],
+    "offset": -0.3
+  },
+
+  "goals": {
+    "goal_0": {
+      "position": [
+        0.1500000059604644,
+        0.0,
+        0.0199999995529651
+      ],
+      "distance": 0.1200000059604644
+    },
+    "goal_1": {
+      "position": [
+        0.1500000059604644,
+        0.1000000014901161,
+        0.0199999995529651
+      ],
+      "distance": 0.1562049990510378
+    },
+    "goal_2": {
+      "position": [
+        -0.1000000014901161,
+        0.0,
+        0.0199999995529651
+      ],
+      "distance": 0.1300000014901161
+    },
+    "goal_3": {
+      "position": [
+        -0.1000000014901161,
+        0.1000000014901161,
+        0.0199999995529651
+      ],
+      "distance": 0.1640121967582088
+    }
+  },
+
+  "metrics": {
+    "reward": -0.12,
+    "success": false,
+    "dist_ee_cube": 0.151,
+    "dist_cube_target": 0.12
+  },
+
+  "events": [
+    {
+      "type": "TARGET_CHANGED",
+      "timestamp": 0,
+      "data": {
+        "new_target": "target"
+      }
+    }
+  ]
+}
