@@ -2,6 +2,7 @@ class KnowledgeBase:
     def __init__(self):
         self.historical_base = []
         self.historical_analyses = []
+        self.session_attempts = []  # NEW: Current session history
         self.data = {
             "goal_threshold": 0.05,
             "allowed_tasks": ["PUSH", "PICK_AND_PLACE", "REACH", "HOLD"],
@@ -62,6 +63,27 @@ class KnowledgeBase:
     def get_history(self):
         return self.historical_base
     
+    def record_attempt(self, issue_type: str, tactic: str, dist_before: float, dist_after: float):
+        """Records the outcome of a tactic within the current session."""
+        if not all([issue_type, tactic, dist_before is not None, dist_after is not None]):
+            return # Avoid recording incomplete data
+            
+        progress = round(dist_before - dist_after, 4)
+        self.session_attempts.append({
+            "issue_type": issue_type,
+            "tactic": tactic,
+            "dist_before": dist_before,
+            "dist_after": dist_after,
+            "progress": progress,
+            "succeeded": progress > 0.005, # A minimal progress is required to be a success
+        })
+
+    def get_failed_tactics(self, issue_type: str) -> list[str]:
+        """Gets tactics that have failed for a specific issue type in the current session."""
+        return [
+            a["tactic"] for a in self.session_attempts if a["issue_type"] == issue_type and not a["succeeded"]
+        ]
+
     def update_history(self, data):
         self.historical_base.append(data)
     
@@ -93,6 +115,7 @@ class KnowledgeBase:
                 h for h in self.data["adaptation_history"]
                 if h["issue_type"] == issue_type
             ],
+            "failed_tactics_this_session": self.get_failed_tactics(issue_type),
         }
 
 knowledge_base = KnowledgeBase()

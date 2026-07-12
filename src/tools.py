@@ -236,6 +236,7 @@ class SimulateActionTool(BaseTool):
     def _run(self, tactic_name: str, issue_type: str, current_task: str, dist_cube_target: float) -> str:
         kb_context = knowledge_base.query(issue_type)
         history = kb_context.get("history", [])
+        failed_this_session = kb_context.get("failed_tactics_this_session", [])
 
         base_map = {
             "continue_push": 0.70,
@@ -254,6 +255,10 @@ class SimulateActionTool(BaseTool):
 
         score = base_map.get(tactic_name, 0.30)
         cost = cost_map.get(tactic_name, 0.25)
+
+        # Heavily penalize tactics that have already failed in this session
+        if tactic_name in failed_this_session:
+            score *= 0.2
 
         for row in history:
             if row.get("strategy") == tactic_name:
@@ -285,6 +290,35 @@ class SimulateActionTool(BaseTool):
             "final_score": round(final_score, 3),
         }
         return json.dumps(result, ensure_ascii=False)
+
+
+class ProposeCustomTacticInput(BaseModel):
+    tactic_name: str = Field(..., description="A descriptive name for the new custom tactic.")
+    description: str = Field(..., description="A brief description of what the custom tactic is expected to achieve.")
+    action_sequence: list[dict] = Field(..., description="A sequence of action dictionaries.")
+    justification: str = Field(..., description="A clear justification for why this custom tactic is necessary and how it solves the problem.")
+
+class ProposeCustomTacticTool(BaseTool):
+    name: str = "propose_custom_tactic"
+    description: str = (
+        "Proposes a new tactic when all known tactics from enumerate_tactics are infeasible "
+        "or have already failed this session. action_sequence must only use actions supported "
+        "by the Executor: set_task, activate_script, advance_execution."
+    )
+    args_schema: Type[BaseModel] = ProposeCustomTacticInput
+
+    def _run(self, tactic_name: str, description: str, action_sequence: list[dict], justification: str) -> str:
+        valid_actions = {"set_task", "activate_script", "advance_execution"}
+        for step in action_sequence:
+            if step.get("action") not in valid_actions:
+                return json.dumps({"error": f"Unsupported action: {step.get('action')}"})
+        return json.dumps({
+            "selected_strategy": tactic_name,
+            "actions": action_sequence,
+            "expected_outcome": description,
+            "reasoning": justification,
+            "is_custom_tactic": True,
+        }, ensure_ascii=False)
 
 
 class GeneratePlanInput(BaseModel):
@@ -345,4 +379,6 @@ class GeneratePlanTool(BaseTool):
         plan = plan_map.get(selected_tactic)
         if plan:
             plan["reasoning"] = reasoning
+            # Ensure the custom tactic flag is set correctly for standard plans
+            plan["is_custom_tactic"] = False
         return json.dumps(plan or {}, ensure_ascii=False)

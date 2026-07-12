@@ -41,7 +41,7 @@ class MAPEKExecutor:
         self.analyser = AnalyserCrew()
         self.metrics_analyser = MetricsAnalyser(self.knowledge)
         self.planner = PlannerCrew()
-        self.executor = Executor()
+        self.executor = Executor(self.knowledge)
 
     def execute_step(self, current_state: dict | None):
         cycle_start_time = time.time()
@@ -121,6 +121,12 @@ class MAPEKExecutor:
         # --------------------
         # UPDATE KNOWLEDGE BASE
         # --------------------
+        self.knowledge.record_attempt(
+            issue_type=analysis_output.get("issue_type"),
+            tactic=plan_output.get("selected_strategy"),
+            dist_before=monitor_output["metrics"]["dist_cube_target"],
+            dist_after=next_state["metrics"]["dist_cube_target"]
+        )
         self.knowledge.update_history(monitor_output)
         self.knowledge.update_analysis_history(analysis_output)
 
@@ -130,7 +136,13 @@ class MAPEKExecutor:
         # Check for termination condition
         if next_state['metrics']['dist_cube_target'] < self.knowledge.data['goal_threshold']:
             print("\n>>> GOAL REACHED! Terminating execution. <<<")
-            return {"monitor": monitor_output, "analysis": analysis_output, "plan": plan_output}, True
+            # Include the final executed state in the return value
+            return {
+                "monitor": monitor_output, 
+                "analysis": analysis_output, 
+                "plan": plan_output, 
+                "final_state": next_state
+            }, True
 
         return next_state, False
 
@@ -160,7 +172,7 @@ class MAPEKExecutor:
         return self.knowledge
     
 executor = MAPEKExecutor(
-    "data/caminho-obstaculo-conhecido.csv"
+    "data/caminho-obstaculo-grande.csv"
 )
 
 results = executor.execute()

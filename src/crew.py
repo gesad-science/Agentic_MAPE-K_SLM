@@ -5,7 +5,8 @@ from tools import (
     QueryKnowledgeBaseTool,
     EnumerateTacticsTool,
     SimulateActionTool,
-    GeneratePlanTool
+    GeneratePlanTool,
+    ProposeCustomTacticTool
 )
 
 
@@ -62,7 +63,8 @@ class PlannerCrew:
                 QueryKnowledgeBaseTool(),
                 EnumerateTacticsTool(),
                 SimulateActionTool(),
-                GeneratePlanTool()
+                GeneratePlanTool(),
+                ProposeCustomTacticTool()
             ],
             llm=llm,
             verbose=True,
